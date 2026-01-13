@@ -1,43 +1,51 @@
-LIBRARY IEEE;
-USE IEEE.STD_LOGIC_1164.all;
-USE IEEE.NUMERIC_STD.all;
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
-ENTITY RAM IS
-GENERIC(A:INTEGER:=5;
-	n:INTEGER:=8);
-PORT(
-	  WR:   IN STD_LOGIC; --WR=1 Write Enable alliws Read Enable
-	  ADDR: IN STD_LOGIC_VECTOR(A-1 DOWNTO 0); --RAM dieuthinseis
-	  DIN:  IN STD_LOGIC_VECTOR(n-1 DOWNTO 0); --Write Dedomena
-	  DOUT: OUT STD_LOGIC_VECTOR(n-1 DOWNTO 0)); --Read Dedomena
-END ENTITY RAM;
+entity RAM_sync is
+  generic (
+    A : integer := 5;  -- address bits (32 locations)
+    D : integer := 8   -- data bits (8-bit word)
+  );
+  port (
+    clk  : in  std_logic;
+    rst  : in  std_logic; -- synchronous reset
+    wr   : in  std_logic; -- 1=write, 0=read
+    addr : in  std_logic_vector(A-1 downto 0);
+    din  : in  std_logic_vector(D-1 downto 0);
+    dout : out std_logic_vector(D-1 downto 0)
+  );
+end entity;
 
-ARCHITECTURE RAMbehavior OF RAM IS
-	SUBTYPE word  IS STD_LOGIC_VECTOR(n-1 DOWNTO 0); --Kathorise to megethos ths lekshs
-	TYPE 	MEMORY is ARRAY(0 to 2**A-1) OF  word; --Megethos ths Mnhmhs
-	SIGNAL 	RAM_32_BYTES: MEMORY; --RAM_32_BYTES ws shma toy typoy MEMORY	
-	
-BEGIN
-	PROCESS(WR,DIN,ADDR)
-		VARIABLE RAM_ADDR_IN: NATURAL RANGE 0 to 2**A-1; --Dieuthinseis se akereous
-		VARIABLE INITIALIZE: BOOLEAN:=TRUE; --metablhth gia arxikopoihsh ths mnhmhs
-	BEGIN
-	RAM_ADDR_IN:=TO_INTEGER(UNSIGNED(ADDR)); --Metatropi dieuthinsewn se akeraious
-		IF(INITIALIZE=TRUE) THEN 
-			RAM_32_BYTES<=(0=>"00000001",
-				       1=>"00000010", --Arxikopouhsh ths mnhmhs bazontas times
-				       2=>"00000011", --Stis protes 4 thesis ths mhnmhs >0      									  													
-				       3=>"00000100", --Kai se oles tis alles 0
-				       OTHERS=>"00000000");
-			DOUT<="XXXXXXXX"; --Mh kathorismenes times sthn eksodo ths RAM
-			INITIALIZE:=FALSE; --H arxikopoihsh etsi ekteleite 
-							   --mono mia fora sthn arxh
-		ELSIF (WR='1') THEN --Diadikasia Eggrafhs Dedomenwn
-			RAM_32_BYTES(RAM_ADDR_IN)<=DIN; --Synexeia anagnosis
-		END IF;
-			
-		DOUT<=RAM_32_BYTES(RAM_ADDR_IN); --Sunexeia Anagnosis
-	END PROCESS;
-		
-END ARCHITECTURE RAMbehavior;
-					
+architecture rtl of RAM_sync is
+  type ram_t is array (0 to 2**A - 1) of std_logic_vector(D-1 downto 0);
+  signal ram : ram_t;
+
+  signal addr_i : integer range 0 to 2**A - 1;
+begin
+  addr_i <= to_integer(unsigned(addr));
+
+  -- Σύγχρονη εγγραφή + σύγχρονη ανάγνωση (registered output)
+ process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst = '1' then
+        -- init
+        ram <= (others => (others => '0'));
+        ram(0) <= "00000001";
+        ram(1) <= "00000010";
+        ram(2) <= "00000011";
+        ram(3) <= "00000100";
+        dout   <= (others => '0'); 
+      else
+        if wr = '1' then
+          ram(addr_i) <= din;
+        end if;
+
+        -- synchronous read (registered output)
+        dout <= ram(addr_i);
+      end if;
+    end if;
+  end process;
+
+end architecture;

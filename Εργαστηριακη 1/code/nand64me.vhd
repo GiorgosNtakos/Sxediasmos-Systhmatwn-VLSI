@@ -18,7 +18,7 @@ END nand64me;
 ARCHITECTURE structural OF nand64me IS
 BEGIN
  -- Broxos o opoios tha ektelestei 64 fores.
-XORLoop: For i IN 0 TO 63 Generate 
+XORLoop: For i IN 0 TO N-1 Generate 
 --Se kathe epanalhpsh anathetoyme thn logikh prajh nand-
 --sto shma ejodoy ths kathe epanalhpshs.
 --Dhladh dhmioyrgoyme 64 diaforetikes pyles nand.
